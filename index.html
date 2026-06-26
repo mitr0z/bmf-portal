@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BMF Enterprises — Portail</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -65,12 +64,15 @@
   .login-error { color: #e74c3c; font-size: 12px; margin-top: 8px; display: none; }
   .toast { position: fixed; bottom: 20px; right: 20px; background: var(--dark2); border: 1px solid var(--gold-dark); border-radius: 8px; padding: 0.75rem 1rem; font-size: 13px; color: var(--gold); opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; z-index: 999; }
   .toast.show { opacity: 1; transform: translateY(0); }
+  .loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 4px; }
   @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
-<div id="login-screen">
+<div id="loading-screen" class="loading">CHARGEMENT...</div>
+
+<div id="login-screen" style="display:none;">
   <div class="login-box">
     <div class="login-logo">BMF</div>
     <div class="login-sub">Enterprises — Portail sécurisé</div>
@@ -196,17 +198,29 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCVIB6YFH_o8vxTr7DeXFxYCENy2DdbSUM",
+  authDomain: "bmf-portal-4f2a5.firebaseapp.com",
+  projectId: "bmf-portal-4f2a5",
+  storageBucket: "bmf-portal-4f2a5.firebasestorage.app",
+  messagingSenderId: "278805215292",
+  appId: "1:278805215292:web:f78da3c9274405ee73ab39",
+  databaseURL: "https://bmf-portal-4f2a5-default-rtdb.europe-west1.firebasedatabase.app"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+
 const ADMIN_KEY = "BMF-ADMIN-2025";
 let currentUser = null;
-let db = {
-  keys: [],
-  commandes: [],
-  stock: [
-    { id: 1, produit: "Pochon standard", qty: 200, price: 54, note: "Unité de base" },
-    { id: 2, produit: "Pochon premium", qty: 80, price: 54, note: "Qualité supérieure" }
-  ]
-};
+let stockCache = {};
+let keysCache = {};
+let commandesCache = {};
 
 function fmt(n) { return '$' + Number(n).toLocaleString('fr-FR'); }
 function fmtDate(d) { return new Date(d).toLocaleDateString('fr-FR'); }
@@ -220,26 +234,37 @@ function toggleForm(id) {
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
-function generateKey() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const seg = () => Array.from({length:4}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
-  document.getElementById('k-generated').value = `BMF-${seg()}-${seg()}`;
+// Init stock par défaut si vide
+async function initDefaultStock() {
+  const snap = await get(ref(db, 'stock'));
+  if (!snap.exists()) {
+    await set(ref(db, 'stock'), {
+      s1: { produit: "Pochon standard", qty: 200, price: 54, note: "Unité de base" },
+      s2: { produit: "Pochon premium", qty: 80, price: 54, note: "Qualité supérieure" }
+    });
+  }
 }
 
-function tryLogin() {
+// LOGIN
+window.tryLogin = async function() {
   const key = document.getElementById('key-input').value.trim().toUpperCase();
   document.getElementById('login-error').style.display = 'none';
   if (key === ADMIN_KEY) {
     currentUser = { role: 'admin', name: 'Boss', gang: 'BMF', color: '#C9A84C' };
     launchApp();
   } else {
-    const found = db.keys.find(k => k.key === key && k.active);
-    if (found) {
-      currentUser = { role: 'client', name: found.lead, gang: found.gang, color: found.color, keyId: found.id };
-      launchApp();
-    } else {
-      document.getElementById('login-error').style.display = 'block';
+    const snap = await get(ref(db, 'keys'));
+    if (snap.exists()) {
+      const keys = snap.val();
+      const found = Object.entries(keys).find(([id, k]) => k.key === key && k.active);
+      if (found) {
+        const [id, k] = found;
+        currentUser = { role: 'client', name: k.lead, gang: k.gang, color: k.color, keyId: id };
+        launchApp();
+        return;
+      }
     }
+    document.getElementById('login-error').style.display = 'block';
   }
 }
 
@@ -249,13 +274,18 @@ function launchApp() {
   document.getElementById('header-user').innerHTML = `<span style="color:${currentUser.color}">◆</span> ${currentUser.name} — ${currentUser.gang}`;
   buildNav();
   if (currentUser.role === 'admin') {
-    showPageDirect('admin-keys'); refreshAdminKeys(); refreshAdminCmds(); renderAdminStock();
+    showPageDirect('admin-keys');
+    listenKeys();
+    listenCommandes();
+    listenStock();
   } else {
-    showPageDirect('client-dashboard'); refreshClientDash(); buildCmdForm();
+    showPageDirect('client-dashboard');
+    listenMyCommandes();
+    listenStockForClient();
   }
 }
 
-function logout() {
+window.logout = function() {
   currentUser = null;
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
@@ -280,38 +310,59 @@ function showPageDirect(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
 }
-function showPage(id, btn) {
+window.showPage = function(id, btn) {
   showPageDirect(id);
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 }
 
 // ADMIN KEYS
-function addKey() {
+window.generateKey = function() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const seg = () => Array.from({length:4}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  document.getElementById('k-generated').value = `BMF-${seg()}-${seg()}`;
+}
+
+window.addKey = async function() {
   const gang = document.getElementById('k-gang').value.trim();
   const lead = document.getElementById('k-lead').value.trim();
   const key = document.getElementById('k-generated').value.trim();
   const color = document.getElementById('k-color').value;
   if (!gang || !lead || !key) return showToast('Remplis tous les champs');
-  if (db.keys.find(k=>k.key===key)) return showToast('Clé déjà existante');
-  db.keys.push({ id: Date.now(), gang, lead, key, color, active: true });
+  const newRef = push(ref(db, 'keys'));
+  await set(newRef, { gang, lead, key, color, active: true, createdAt: Date.now() });
   document.getElementById('k-gang').value = '';
   document.getElementById('k-lead').value = '';
   document.getElementById('k-generated').value = '';
-  refreshAdminKeys(); showToast('Accès créé pour ' + gang);
+  showToast('Accès créé pour ' + gang);
 }
-function toggleKeyStatus(id) {
-  const k = db.keys.find(k=>k.id===id);
-  if (k) { k.active = !k.active; refreshAdminKeys(); showToast(k.active ? 'Clé réactivée' : 'Clé désactivée'); }
+
+window.toggleKeyStatus = async function(id, current) {
+  await update(ref(db, 'keys/' + id), { active: !current });
+  showToast(!current ? 'Clé réactivée' : 'Clé désactivée');
 }
-function deleteKey(id) { db.keys = db.keys.filter(k=>k.id!==id); refreshAdminKeys(); showToast('Clé supprimée'); }
-function copyKey(key) {
+
+window.deleteKey = async function(id) {
+  await remove(ref(db, 'keys/' + id));
+  showToast('Clé supprimée');
+}
+
+window.copyKey = function(key) {
   navigator.clipboard?.writeText(key).then(()=>showToast('Copié : '+key)).catch(()=>showToast('Clé : '+key));
 }
-function refreshAdminKeys() {
+
+function listenKeys() {
+  onValue(ref(db, 'keys'), snap => {
+    keysCache = snap.exists() ? snap.val() : {};
+    renderAdminKeys();
+  });
+}
+
+function renderAdminKeys() {
   const tb = document.getElementById('keys-table');
-  tb.innerHTML = db.keys.map(k => {
-    const cmds = db.commandes.filter(c=>c.gang===k.gang).length;
+  const entries = Object.entries(keysCache);
+  tb.innerHTML = entries.map(([id, k]) => {
+    const cmds = Object.values(commandesCache).filter(c=>c.gang===k.gang).length;
     return `<tr>
       <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${k.color};margin-right:6px;"></span><b>${k.gang}</b></td>
       <td>${k.lead}</td>
@@ -319,27 +370,37 @@ function refreshAdminKeys() {
       <td><span class="badge ${k.active?'badge-green':'badge-red'}">${k.active?'Active':'Off'}</span></td>
       <td><span class="badge badge-gold">${cmds}</span></td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="toggleKeyStatus(${k.id})">${k.active?'Désactiver':'Activer'}</button>
-        <button class="btn btn-red" onclick="deleteKey(${k.id})">Suppr.</button>
+        <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="toggleKeyStatus('${id}',${k.active})">${k.active?'Désactiver':'Activer'}</button>
+        <button class="btn btn-red" onclick="deleteKey('${id}')">Suppr.</button>
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="6" style="color:var(--text-muted);text-align:center;padding:1.5rem;">Aucune clé créée</td></tr>';
 }
 
 // ADMIN COMMANDES
-function updateCmdStatus(id, status) {
-  const c = db.commandes.find(c=>c.id===id);
-  if (c) { c.status = status; refreshAdminCmds(); showToast('Statut mis à jour'); }
+window.updateCmdStatus = async function(id, status) {
+  await update(ref(db, 'commandes/' + id), { status });
+  showToast('Statut mis à jour');
 }
-function refreshAdminCmds() {
+
+function listenCommandes() {
+  onValue(ref(db, 'commandes'), snap => {
+    commandesCache = snap.exists() ? snap.val() : {};
+    renderAdminCmds();
+    renderAdminKeys();
+  });
+}
+
+function renderAdminCmds() {
   const tb = document.getElementById('admin-cmd-table');
-  tb.innerHTML = [...db.commandes].reverse().map(c=>`<tr>
+  const entries = Object.entries(commandesCache).reverse();
+  tb.innerHTML = entries.map(([id, c]) => `<tr>
     <td>${fmtDate(c.date)}</td>
     <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color||'#888'};margin-right:5px;"></span>${c.gang}</td>
     <td>${c.produit}</td><td>${c.qty} u.</td>
     <td style="color:#2ecc71">${fmt(c.montant)}</td>
     <td style="font-size:12px;">${c.lieu||'—'}</td>
-    <td><select onchange="updateCmdStatus(${c.id},this.value)" style="font-size:11px;padding:3px;background:var(--dark3);color:var(--text);border:1px solid #2a2a2a;border-radius:4px;">
+    <td><select onchange="updateCmdStatus('${id}',this.value)" style="font-size:11px;padding:3px;background:var(--dark3);color:var(--text);border:1px solid #2a2a2a;border-radius:4px;">
       <option ${c.status==='En attente'?'selected':''}>En attente</option>
       <option ${c.status==='Confirmée'?'selected':''}>Confirmée</option>
       <option ${c.status==='Livrée'?'selected':''}>Livrée</option>
@@ -349,33 +410,64 @@ function refreshAdminCmds() {
 }
 
 // ADMIN STOCK
-function addAdminStock() {
+window.addAdminStock = async function() {
   const produit = document.getElementById('as-produit').value.trim();
   const qty = parseFloat(document.getElementById('as-qty').value);
   const price = parseFloat(document.getElementById('as-price').value);
   const note = document.getElementById('as-note').value;
   if (!produit || !qty || !price) return showToast('Tous les champs requis');
-  const existing = db.stock.find(s=>s.produit===produit);
-  if (existing) { existing.qty += qty; existing.price = price; existing.note = note||existing.note; }
-  else db.stock.push({ id: Date.now(), produit, qty, price, note: note||'—' });
+  const existing = Object.entries(stockCache).find(([id,s])=>s.produit===produit);
+  if (existing) {
+    await update(ref(db, 'stock/' + existing[0]), { qty: existing[1].qty + qty, price, note: note||existing[1].note });
+  } else {
+    const newRef = push(ref(db, 'stock'));
+    await set(newRef, { produit, qty, price, note: note||'—' });
+  }
   toggleForm('admin-stock-form');
-  renderAdminStock(); showToast('Stock mis à jour');
+  showToast('Stock mis à jour');
 }
-function deleteStock(id) { db.stock = db.stock.filter(s=>s.id!==id); renderAdminStock(); showToast('Stock supprimé'); }
+
+window.deleteStock = async function(id) {
+  await remove(ref(db, 'stock/' + id));
+  showToast('Stock supprimé');
+}
+
+function listenStock() {
+  onValue(ref(db, 'stock'), snap => {
+    stockCache = snap.exists() ? snap.val() : {};
+    renderAdminStock();
+  });
+}
+
 function renderAdminStock() {
   const tb = document.getElementById('admin-stock-table');
-  tb.innerHTML = db.stock.map(s=>`<tr>
+  const entries = Object.entries(stockCache);
+  tb.innerHTML = entries.map(([id,s]) => `<tr>
     <td><b>${s.produit}</b></td>
     <td style="color:${s.qty<20?'#e74c3c':'#2ecc71'}">${s.qty} pochon(s)</td>
     <td style="color:var(--gold)">${fmt(s.price)} / pochon</td>
     <td>${s.note}</td>
-    <td><button class="btn btn-red" onclick="deleteStock(${s.id})">Suppr.</button></td>
+    <td><button class="btn btn-red" onclick="deleteStock('${id}')">Suppr.</button></td>
   </tr>`).join('') || '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:1rem;">Aucun stock</td></tr>';
 }
 
 // CLIENT
+function listenMyCommandes() {
+  onValue(ref(db, 'commandes'), snap => {
+    commandesCache = snap.exists() ? snap.val() : {};
+    refreshClientDash();
+  });
+}
+
+function listenStockForClient() {
+  onValue(ref(db, 'stock'), snap => {
+    stockCache = snap.exists() ? snap.val() : {};
+    buildCmdForm();
+  });
+}
+
 function refreshClientDash() {
-  const myCmds = db.commandes.filter(c=>c.gang===currentUser.gang);
+  const myCmds = Object.values(commandesCache).filter(c=>c.gang===currentUser.gang);
   const pending = myCmds.filter(c=>c.status==='En attente'||c.status==='Confirmée').length;
   const spent = myCmds.filter(c=>c.status!=='Annulée').reduce((a,c)=>a+c.montant,0);
   document.getElementById('cl-total').textContent = myCmds.length;
@@ -392,14 +484,17 @@ function refreshClientDash() {
     <td><span class="badge ${sm[c.status]||'badge-gray'}">${c.status}</span></td>
   </tr>`).join('') || '<tr><td colspan="6" style="color:var(--text-muted);text-align:center;padding:1.5rem;">Aucune commande passée</td></tr>';
 }
+
 function buildCmdForm() {
   const sel = document.getElementById('cmd-produit');
-  sel.innerHTML = db.stock.map(s=>`<option value="${s.id}">${s.produit} — ${fmt(s.price)}/pochon (${s.qty} dispo)</option>`).join('');
+  const entries = Object.entries(stockCache);
+  sel.innerHTML = entries.map(([id,s])=>`<option value="${id}">${s.produit} — ${fmt(s.price)}/pochon (${s.qty} dispo)</option>`).join('');
   calcTotal();
 }
-function calcTotal() {
-  const selId = parseInt(document.getElementById('cmd-produit')?.value);
-  const s = db.stock.find(s=>s.id===selId);
+
+window.calcTotal = function() {
+  const selId = document.getElementById('cmd-produit')?.value;
+  const s = stockCache[selId];
   const qty = parseFloat(document.getElementById('cmd-qty')?.value)||0;
   if (s) {
     document.getElementById('calc-unit').textContent = fmt(s.price)+'/pochon';
@@ -407,26 +502,32 @@ function calcTotal() {
     document.getElementById('calc-total').textContent = fmt(qty*s.price);
   }
 }
-function passerCommande() {
-  const selId = parseInt(document.getElementById('cmd-produit').value);
-  const s = db.stock.find(s=>s.id===selId);
+
+window.passerCommande = async function() {
+  const selId = document.getElementById('cmd-produit').value;
+  const s = stockCache[selId];
   const qty = parseFloat(document.getElementById('cmd-qty').value);
   const lieu = document.getElementById('cmd-lieu').value;
   if (!qty || qty < 1) return showToast('Quantité invalide');
   if (!s || qty > s.qty) return showToast('Stock insuffisant');
   if (!lieu) return showToast('Lieu de livraison requis');
-  db.commandes.push({ id: Date.now(), gang: currentUser.gang, lead: currentUser.name, color: currentUser.color, produit: s.produit, qty, montant: qty*s.price, lieu, status: 'En attente', date: new Date().toISOString() });
-  s.qty -= qty;
+  const newRef = push(ref(db, 'commandes'));
+  await set(newRef, { gang: currentUser.gang, lead: currentUser.name, color: currentUser.color, produit: s.produit, qty, montant: qty*s.price, lieu, status: 'En attente', date: new Date().toISOString() });
+  await update(ref(db, 'stock/' + selId), { qty: s.qty - qty });
   document.getElementById('cmd-qty').value = '';
   document.getElementById('cmd-lieu').value = '';
   showPageDirect('client-dashboard');
   document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
-  refreshClientDash(); buildCmdForm();
   showToast('Commande envoyée — En attente de confirmation');
 }
 
 function updateClock() { document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
 setInterval(updateClock,1000); updateClock();
+
+// INIT
+document.getElementById('loading-screen').style.display = 'none';
+document.getElementById('login-screen').style.display = 'flex';
+await initDefaultStock();
 </script>
 </body>
 </html>
