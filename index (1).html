@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BEF Enterprises — Portail Sécurisé</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #C9A84C; --gold-light: #E8C96A; --gold-dark: #8B6914;
+    --black: #0a0a0a; --dark2: #1a1a1a; --dark3: #222;
+    --text: #f0e6c8; --text-muted: #8a7a5a;
+  }
+  body { 
+    background: var(--black); 
+    color: var(--text); 
+    font-family: 'Helvetica Neue', Arial, sans-serif; 
+    min-height: 100vh;
+    background-image: 
+      radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 50%, rgba(201,168,76,0.02) 0%, transparent 50%);
+  }
+  #app { max-width: 960px; margin: 0 auto; min-height: 100vh; border-left: 1px solid var(--gold-dark); border-right: 1px solid var(--gold-dark); }
+  .header { background: var(--dark2); border-bottom: 2px solid var(--gold); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: 'Bebas Neue', 'Arial Black', sans-serif; font-size: 26px; letter-spacing: 4px; color: var(--gold); }
+  .logo span { color: #fff; }
+  nav { background: var(--dark3); display: flex; border-bottom: 1px solid #2a2a2a; overflow-x: auto; }
+  .nav-btn { padding: 0.75rem 1.25rem; background: none; border: none; color: var(--text-muted); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .nav-btn:hover { color: var(--gold-light); }
+  .nav-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .page { display: none; padding: 1.5rem; }
+  .page.active { display: block; }
+  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 3px; color: var(--gold); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #2a2a2a; }
+  .card { background: var(--dark2); border: 1px solid #2a2a2a; border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); }
+  input, select { background: var(--dark3); border: 1px solid #2a2a2a; color: var(--text); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 13px; width: 100%; }
+  input:focus, select:focus { outline: none; border-color: var(--gold-dark); }
+  .btn { padding: 0.5rem 1rem; border-radius: 6px; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; font-weight: 600; border: none; }
+  .btn-gold { background: var(--gold); color: var(--black); }
+  .btn-ghost { background: transparent; border: 1px solid #2a2a2a; color: var(--text-muted); cursor: pointer; }
+  .btn-ghost:hover { border-color: var(--gold-dark); color: var(--gold); }
+  .btn-red { background: rgba(231,76,60,0.15); border: 1px solid #e74c3c; color: #e74c3c; font-size: 10px; padding: 3px 8px; cursor: pointer; border-radius: 4px; }
+  .table-wrap { background: var(--dark2); border: 1px solid #2a2a2a; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 500px; }
+  th { padding: 0.6rem 1rem; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); text-align: left; border-bottom: 1px solid #2a2a2a; background: var(--dark3); }
+  td { padding: 0.65rem 1rem; font-size: 13px; border-bottom: 1px solid #1a1a1a; color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
+  .badge-green { background: rgba(46,204,113,0.15); color: #2ecc71; }
+  .badge-red { background: rgba(231,76,60,0.15); color: #e74c3c; }
+  .badge-gold { background: rgba(201,168,76,0.15); color: var(--gold); }
+  .badge-gray { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+  .stat-card { background: var(--dark2); border: 1px solid var(--gold-dark); border-radius: 8px; padding: 1rem; }
+  .stat-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-value { font-size: 22px; font-weight: 700; color: var(--gold); }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .flex-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .key-display { font-family: monospace; font-size: 12px; background: var(--dark3); padding: 4px 10px; border-radius: 4px; color: var(--gold); letter-spacing: 2px; cursor: pointer; }
+  .key-display:hover { background: #2a2a2a; }
+  #login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--black); }
+  .login-box { background: var(--dark2); border: 1px solid var(--gold-dark); border-radius: 12px; padding: 2rem; width: 340px; text-align: center; }
+  .login-logo { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 6px; color: var(--gold); margin-bottom: 4px; }
+  .login-sub { font-size: 11px; letter-spacing: 3px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2rem; }
+  .login-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); display: block; text-align: left; margin-bottom: 6px; }
+  .login-input { width: 100%; background: var(--dark3); border: 1px solid #2a2a2a; color: var(--text); padding: 0.65rem 1rem; border-radius: 8px; font-size: 14px; font-family: monospace; letter-spacing: 2px; text-align: center; margin-bottom: 1rem; }
+  .login-input:focus { outline: none; border-color: var(--gold-dark); }
+  .login-btn { width: 100%; padding: 0.65rem; background: var(--gold); color: var(--black); border: none; border-radius: 8px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; cursor: pointer; }
+  .login-btn:hover { background: var(--gold-light); }
+  .login-error { color: #e74c3c; font-size: 12px; margin-top: 8px; display: none; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--dark2); border: 1px solid var(--gold-dark); border-radius: 8px; padding: 0.75rem 1rem; font-size: 13px; color: var(--gold); opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+  /* === AMÉLIORATIONS UI === */
+
+  /* Effet de lueur sur le header */
+  .header {
+    box-shadow: 0 4px 20px rgba(201,168,76,0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  /* Animation d'entrée des pages */
+  .page {
+    animation: fadeInUp 0.4s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Cartes avec effet de survol */
+  .card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .card:hover::before {
+    opacity: 1;
+  }
+
+  .card:hover {
+    border-color: var(--gold-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(201,168,76,0.08);
+  }
+
+  /* Stat cards améliorées */
+  .stat-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: -50%; right: -50%;
+    width: 100%; height: 100%;
+    background: radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(201,168,76,0.12);
+    border-color: var(--gold);
+  }
+
+  /* Navigation améliorée */
+  .nav-btn {
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .nav-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    width: 0; height: 2px;
+    background: var(--gold);
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+  }
+
+  .nav-btn:hover::after {
+    width: 60%;
+  }
+
+  .nav-btn.active::after {
+    width: 100%;
+  }
+
+  /* Table rows avec effet de survol */
+  tr {
+    transition: background 0.2s;
+  }
+
+  tr:hover td {
+    background: rgba(201,168,76,0.03);
+  }
+
+  /* Badges avec animation */
+  .badge {
+    transition: all 0.2s;
+  }
+
+  .badge:hover {
+    transform: scale(1.05);
+  }
+
+  /* Boutons améliorés */
+  .btn {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s, height 0.4s;
+  }
+
+  .btn:active::before {
+    width: 200px; height: 200px;
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(201,168,76,0.2);
+  }
+
+  .btn-gold:hover {
+    background: var(--gold-light);
+    box-shadow: 0 4px 15px rgba(201,168,76,0.3);
+  }
+
+  /* Login screen amélioré */
+  .login-box {
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(201,168,76,0.05);
+    animation: loginAppear 0.6s ease-out;
+  }
+
+  @keyframes loginAppear {
+    from { opacity: 0; transform: scale(0.95) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .login-logo {
+    text-shadow: 0 0 30px rgba(201,168,76,0.3);
+  }
+
+  /* Toast amélioré */
+  .toast {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+  }
+
+  /* Scrollbar personnalisée */
+  ::-webkit-scrollbar {
+    width: 8px; height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--dark2);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--gold-dark);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--gold);
+  }
+
+  /* Input focus glow */
+  input:focus, select:focus {
+    box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
+  }
+
+  /* Key display amélioré */
+  .key-display {
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+
+  .key-display:hover {
+    border-color: var(--gold-dark);
+    background: #2a2a2a;
+  }
+
+  /* Section title avec ligne décorative */
+  .section-title {
+    position: relative;
+    padding-left: 1rem;
+  }
+
+  .section-title::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 4px; height: 70%;
+    background: linear-gradient(to bottom, var(--gold), var(--gold-dark));
+    border-radius: 2px;
+  }
+
+  /* Loading shimmer pour les tableaux vides */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* Responsive amélioré */
+  @media (max-width: 600px) {
+    .grid-3 {
+      grid-template-columns: 1fr;
+    }
+
+    .login-box {
+      width: 90%;
+      margin: 0 1rem;
+    }
+  }
+
+  /* Effet de pulse pour les stats importantes */
+  @keyframes pulse-gold {
+    0%, 100% { text-shadow: 0 0 0 rgba(201,168,76,0); }
+    50% { text-shadow: 0 0 10px rgba(201,168,76,0.3); }
+  }
+
+  .stat-value {
+    animation: pulse-gold 3s ease-in-out infinite;
+  }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">BEF</div>
+    <div class="login-sub">Enterprises — Portail sécurisé</div>
+    <label class="login-label">Clé d'accès</label>
+    <input type="text" class="login-input" id="key-input" placeholder="BEF-XXXX-XXXX" maxlength="20" onkeydown="if(event.key==='Enter')tryLogin()">
+    <button class="login-btn" onclick="tryLogin()">Accéder</button>
+    <div class="login-error" id="login-error">Clé invalide — Contactez votre responsable</div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <div class="header">
+    <div>
+      <div class="logo">B<span>E</span>F <span style="color:var(--text-muted);font-size:14px;letter-spacing:2px;">ENTERPRISES</span></div>
+      <div style="margin-top:4px;font-size:11px;color:var(--text-muted);letter-spacing:1px;" id="header-user"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div id="clock" style="font-size:11px;color:var(--text-muted);"></div>
+      <button class="btn btn-ghost" onclick="logout()" style="font-size:10px;">Déco</button>
+    </div>
+  </div>
+  <nav id="main-nav"></nav>
+
+  <div class="page" id="page-admin-keys">
+    <div class="section-title">Clés d'accès</div>
+    <div class="card">
+      <div class="form-row">
+        <div class="form-group"><label>Nom du gang</label><input type="text" id="k-gang" placeholder="Ballas, Grove Street..."></div>
+        <div class="form-group"><label>Nom du lead (RP)</label><input type="text" id="k-lead" placeholder="Nom du perso..."></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Couleur du gang</label><input type="color" id="k-color" value="#8B5CF6" style="height:38px;padding:4px;"></div>
+        <div class="form-group"><label>Clé générée</label><input type="text" id="k-generated" readonly placeholder="Cliquer sur Générer..." style="font-family:monospace;letter-spacing:2px;"></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="generateKey()">Générer clé</button>
+        <button class="btn btn-gold" onclick="addKey()">Créer l'accès</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Gang</th><th>Lead RP</th><th>Clé</th><th>Statut</th><th>Commandes</th><th>Actions</th></tr></thead>
+        <tbody id="keys-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-admin-commandes">
+    <div class="section-title">Toutes les commandes</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Gang</th><th>Produit</th><th>Qté</th><th>Total</th><th>Livraison</th><th>Statut</th></tr></thead>
+        <tbody id="admin-cmd-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-admin-stock">
+    <div class="flex-row">
+      <div class="section-title" style="margin:0">Stock disponible</div>
+      <button class="btn btn-gold" onclick="toggleForm('admin-stock-form')">+ Ajouter</button>
+    </div>
+    <div id="admin-stock-form" style="display:none;margin-top:1rem;" class="card">
+      <div class="form-row">
+        <div class="form-group"><label>Produit</label><input type="text" id="as-produit" placeholder="Nom du produit..."></div>
+        <div class="form-group"><label>Quantité</label><input type="number" id="as-qty" placeholder="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Prix à l'unité ($)</label><input type="number" id="as-price" placeholder="54"></div>
+        <div class="form-group"><label>Note</label><input type="text" id="as-note" placeholder="Note..."></div>
+      </div>
+      <button class="btn btn-gold" onclick="addAdminStock()">Ajouter</button>
+    </div>
+    <div style="margin-top:1rem;" class="table-wrap">
+      <table>
+        <thead><tr><th>Produit</th><th>Stock</th><th>Prix/unité</th><th>Note</th><th>Action</th></tr></thead>
+        <tbody id="admin-stock-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-client-dashboard">
+    <div class="card" id="client-info-bar" style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;"></div>
+    <div class="grid-3">
+      <div class="stat-card"><div class="stat-label">Commandes totales</div><div class="stat-value" id="cl-total">0</div></div>
+      <div class="stat-card"><div class="stat-label">En attente</div><div class="stat-value" style="color:#f39c12" id="cl-pending">0</div></div>
+      <div class="stat-card"><div class="stat-label">Total dépensé</div><div class="stat-value" id="cl-spent">$0</div></div>
+    </div>
+    <div class="section-title">Mes commandes</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Produit</th><th>Qté</th><th>Total</th><th>Livraison</th><th>Statut</th></tr></thead>
+        <tbody id="cl-cmd-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-client-commander">
+    <div class="section-title">Passer une commande</div>
+    <div class="card">
+      <div class="form-row">
+        <div class="form-group"><label>Produit</label><select id="cmd-produit" onchange="calcTotal()"></select></div>
+        <div class="form-group"><label>Quantité</label><input type="number" id="cmd-qty" placeholder="0" oninput="calcTotal()" min="1"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Point de livraison (RP)</label><input type="text" id="cmd-lieu" placeholder="Lieu dans le jeu..."></div>
+        <div class="form-group"><label>Message</label><input type="text" id="cmd-msg" placeholder="Optionnel..."></div>
+      </div>
+      <div class="card" style="background:var(--dark3);margin-top:8px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-muted)">Prix unitaire</span><span id="calc-unit">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;"><span style="color:var(--text-muted)">Quantité</span><span id="calc-qty">0</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:700;margin-top:10px;color:var(--gold);"><span>Total</span><span id="calc-total">$0</span></div>
+      </div>
+      <button class="btn btn-gold" onclick="passerCommande()">Envoyer la commande</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCVIB6YFH_o8vxTr7DeXFxYCENy2DdbSUM",
+  authDomain: "bmf-portal-4f2a5.firebaseapp.com",
+  projectId: "bmf-portal-4f2a5",
+  storageBucket: "bmf-portal-4f2a5.firebasestorage.app",
+  messagingSenderId: "278805215292",
+  appId: "1:278805215292:web:f78da3c9274405ee73ab39",
+  databaseURL: "https://bmf-portal-4f2a5-default-rtdb.europe-west1.firebasedatabase.app"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+
+const ADMIN_KEY = "BEF-ADMIN-2025";
+let currentUser = null;
+let stockCache = {};
+let keysCache = {};
+let commandesCache = {};
+
+function fmt(n) { return '$' + Number(n).toLocaleString('fr-FR'); }
+function fmtDate(d) { return new Date(d).toLocaleDateString('fr-FR'); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+window.toggleForm = function(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function initDefaultStock() {
+  const snap = await get(ref(db, 'stock'));
+  if (!snap.exists()) {
+    await set(ref(db, 'stock'), {
+      s1: { produit: "Petit pain", qty: 200, price: 54, note: "Unité de base — Pain frais cuit au four" }
+    });
+  }
+}
+
+window.tryLogin = async function() {
+  const key = document.getElementById('key-input').value.trim().toUpperCase();
+  document.getElementById('login-error').style.display = 'none';
+  if (key === ADMIN_KEY) {
+    currentUser = { role: 'admin', name: 'Boss', gang: 'BEF', color: '#C9A84C' };
+    launchApp();
+    return;
+  }
+  try {
+    const snap = await get(ref(db, 'keys'));
+    if (snap.exists()) {
+      const keys = snap.val();
+      const found = Object.entries(keys).find(([id, k]) => k.key === key && k.active);
+      if (found) {
+        const [id, k] = found;
+        currentUser = { role: 'client', name: k.lead, gang: k.gang, color: k.color, keyId: id };
+        launchApp();
+        return;
+      }
+    }
+  } catch(e) { console.error(e); }
+  document.getElementById('login-error').style.display = 'block';
+}
+
+function launchApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('header-user').innerHTML = `<span style="color:${currentUser.color}">◆</span> ${currentUser.name} — ${currentUser.gang}`;
+  buildNav();
+  if (currentUser.role === 'admin') {
+    showPageDirect('admin-keys');
+    listenKeys();
+    listenCommandes();
+    listenStock();
+  } else {
+    showPageDirect('client-dashboard');
+    listenMyCommandes();
+    listenStockForClient();
+  }
+}
+
+window.logout = function() {
+  currentUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('key-input').value = '';
+}
+
+function buildNav() {
+  const nav = document.getElementById('main-nav');
+  if (currentUser.role === 'admin') {
+    nav.innerHTML = `
+      <button class="nav-btn active" onclick="showPage('admin-keys',this)">Clés</button>
+      <button class="nav-btn" onclick="showPage('admin-commandes',this)">Commandes</button>
+      <button class="nav-btn" onclick="showPage('admin-stock',this)">Stock</button>`;
+  } else {
+    nav.innerHTML = `
+      <button class="nav-btn active" onclick="showPage('client-dashboard',this)">Mon statut</button>
+      <button class="nav-btn" onclick="showPage('client-commander',this)">Commander</button>`;
+  }
+}
+
+function showPageDirect(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+}
+window.showPage = function(id, btn) {
+  showPageDirect(id);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+window.generateKey = function() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const seg = () => Array.from({length:4}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  document.getElementById('k-generated').value = `BEF-${seg()}-${seg()}`;
+}
+
+window.addKey = async function() {
+  const gang = document.getElementById('k-gang').value.trim();
+  const lead = document.getElementById('k-lead').value.trim();
+  const key = document.getElementById('k-generated').value.trim();
+  const color = document.getElementById('k-color').value;
+  if (!gang || !lead || !key) return showToast('Remplis tous les champs');
+  const newRef = push(ref(db, 'keys'));
+  await set(newRef, { gang, lead, key, color, active: true, createdAt: Date.now() });
+  document.getElementById('k-gang').value = '';
+  document.getElementById('k-lead').value = '';
+  document.getElementById('k-generated').value = '';
+  showToast('Accès créé pour ' + gang);
+}
+
+window.toggleKeyStatus = async function(id, current) {
+  await update(ref(db, 'keys/' + id), { active: !current });
+  showToast(!current ? 'Clé réactivée' : 'Clé désactivée');
+}
+
+window.deleteKey = async function(id) {
+  await remove(ref(db, 'keys/' + id));
+  showToast('Clé supprimée');
+}
+
+window.copyKey = function(key) {
+  navigator.clipboard?.writeText(key).then(()=>showToast('Copié : '+key)).catch(()=>showToast('Clé : '+key));
+}
+
+function listenKeys() {
+  onValue(ref(db, 'keys'), snap => {
+    keysCache = snap.exists() ? snap.val() : {};
+    renderAdminKeys();
+  });
+}
+
+function renderAdminKeys() {
+  const tb = document.getElementById('keys-table');
+  const entries = Object.entries(keysCache);
+  tb.innerHTML = entries.map(([id, k]) => {
+    const cmds = Object.values(commandesCache).filter(c=>c.gang===k.gang).length;
+    return `<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${k.color};margin-right:6px;"></span><b>${k.gang}</b></td>
+      <td>${k.lead}</td>
+      <td><span class="key-display" onclick="copyKey('${k.key}')">${k.key}</span></td>
+      <td><span class="badge ${k.active?'badge-green':'badge-red'}">${k.active?'Active':'Off'}</span></td>
+      <td><span class="badge badge-gold">${cmds}</span></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="toggleKeyStatus('${id}',${k.active})">${k.active?'Désactiver':'Activer'}</button>
+        <button class="btn btn-red" onclick="deleteKey('${id}')">Suppr.</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" style="color:var(--text-muted);text-align:center;padding:1.5rem;">Aucune clé créée</td></tr>';
+}
+
+window.updateCmdStatus = async function(id, status) {
+  await update(ref(db, 'commandes/' + id), { status });
+  showToast('Statut mis à jour');
+}
+
+function listenCommandes() {
+  onValue(ref(db, 'commandes'), snap => {
+    commandesCache = snap.exists() ? snap.val() : {};
+    renderAdminCmds();
+    renderAdminKeys();
+  });
+}
+
+function renderAdminCmds() {
+  const tb = document.getElementById('admin-cmd-table');
+  const entries = Object.entries(commandesCache).reverse();
+  tb.innerHTML = entries.map(([id, c]) => `<tr>
+    <td>${fmtDate(c.date)}</td>
+    <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color||'#888'};margin-right:5px;"></span>${c.gang}</td>
+    <td>${c.produit}</td><td>${c.qty}</td>
+    <td style="color:#2ecc71">${fmt(c.montant)}</td>
+    <td style="font-size:12px;">${c.lieu||'—'}</td>
+    <td><select onchange="updateCmdStatus('${id}',this.value)" style="font-size:11px;padding:3px;background:var(--dark3);color:var(--text);border:1px solid #2a2a2a;border-radius:4px;">
+      <option ${c.status==='En attente'?'selected':''}>En attente</option>
+      <option ${c.status==='Confirmée'?'selected':''}>Confirmée</option>
+      <option ${c.status==='Livrée'?'selected':''}>Livrée</option>
+      <option ${c.status==='Annulée'?'selected':''}>Annulée</option>
+    </select></td>
+  </tr>`).join('') || '<tr><td colspan="7" style="color:var(--text-muted);text-align:center;padding:1.5rem;">Aucune commande</td></tr>';
+}
+
+window.addAdminStock = async function() {
+  const produit = document.getElementById('as-produit').value.trim();
+  const qty = parseFloat(document.getElementById('as-qty').value);
+  const price = parseFloat(document.getElementById('as-price').value);
+  const note = document.getElementById('as-note').value;
+  if (!produit || !qty || !price) return showToast('Tous les champs requis');
+  const existing = Object.entries(stockCache).find(([id,s])=>s.produit===produit);
+  if (existing) {
+    await update(ref(db, 'stock/' + existing[0]), { qty: existing[1].qty + qty, price, note: note||existing[1].note });
+  } else {
+    await set(push(ref(db, 'stock')), { produit, qty, price, note: note||'—' });
+  }
+  toggleForm('admin-stock-form');
+  showToast('Stock mis à jour');
+}
+
+window.deleteStock = async function(id) {
+  await remove(ref(db, 'stock/' + id));
+  showToast('Stock supprimé');
+}
+
+function listenStock() {
+  onValue(ref(db, 'stock'), snap => {
+    stockCache = snap.exists() ? snap.val() : {};
+    renderAdminStock();
+  });
+}
+
+function renderAdminStock() {
+  const tb = document.getElementById('admin-stock-table');
+  tb.innerHTML = Object.entries(stockCache).map(([id,s]) => `<tr>
+    <td><b>${s.produit}</b></td>
+    <td style="color:${s.qty<20?'#e74c3c':'#2ecc71'}">${s.qty}</td>
+    <td style="color:var(--gold)">${fmt(s.price)}</td>
+    <td>${s.note}</td>
+    <td><button class="btn btn-red" onclick="deleteStock('${id}')">Suppr.</button></td>
+  </tr>`).join('') || '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:1rem;">Aucun stock</td></tr>';
+}
+
+function listenMyCommandes() {
+  onValue(ref(db, 'commandes'), snap => {
+    commandesCache = snap.exists() ? snap.val() : {};
+    refreshClientDash();
+  });
+}
+
+function listenStockForClient() {
+  onValue(ref(db, 'stock'), snap => {
+    stockCache = snap.exists() ? snap.val() : {};
+    buildCmdForm();
+  });
+}
+
+function refreshClientDash() {
+  const myCmds = Object.values(commandesCache).filter(c=>c.gang===currentUser.gang);
+  const pending = myCmds.filter(c=>c.status==='En attente'||c.status==='Confirmée').length;
+  const spent = myCmds.filter(c=>c.status!=='Annulée').reduce((a,c)=>a+c.montant,0);
+  document.getElementById('cl-total').textContent = myCmds.length;
+  document.getElementById('cl-pending').textContent = pending;
+  document.getElementById('cl-spent').textContent = fmt(spent);
+  document.getElementById('client-info-bar').innerHTML = `<div style="width:40px;height:40px;border-radius:50%;background:${currentUser.color};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#000;flex-shrink:0;">${currentUser.gang.slice(0,2).toUpperCase()}</div><div><div style="font-size:15px;font-weight:600;">${currentUser.name}</div><div style="font-size:12px;color:var(--text-muted);">${currentUser.gang} — Accès Lead</div></div>`;
+  const sm = {'En attente':'badge-gold','Confirmée':'badge-green','Livrée':'badge-green','Annulée':'badge-red'};
+  document.getElementById('cl-cmd-table').innerHTML = [...myCmds].reverse().map(c=>`<tr>
+    <td>${fmtDate(c.date)}</td><td>${c.produit}</td><td>${c.qty}</td>
+    <td style="color:#2ecc71">${fmt(c.montant)}</td>
+    <td style="font-size:12px;">${c.lieu||'—'}</td>
+    <td><span class="badge ${sm[c.status]||'badge-gray'}">${c.status}</span></td>
+  </tr>`).join('') || '<tr><td colspan="6" style="color:var(--text-muted);text-align:center;padding:1.5rem;">Aucune commande passée</td></tr>';
+}
+
+function buildCmdForm() {
+  const sel = document.getElementById('cmd-produit');
+  sel.innerHTML = Object.entries(stockCache).map(([id,s])=>`<option value="${id}">${s.produit} — ${fmt(s.price)} (${s.qty} dispo)</option>`).join('');
+  calcTotal();
+}
+
+window.calcTotal = function() {
+  const selId = document.getElementById('cmd-produit')?.value;
+  const s = stockCache[selId];
+  const qty = parseFloat(document.getElementById('cmd-qty')?.value)||0;
+  if (s) {
+    document.getElementById('calc-unit').textContent = fmt(s.price);
+    document.getElementById('calc-qty').textContent = qty;
+    document.getElementById('calc-total').textContent = fmt(qty*s.price);
+  }
+}
+
+window.passerCommande = async function() {
+  const selId = document.getElementById('cmd-produit').value;
+  const s = stockCache[selId];
+  const qty = parseFloat(document.getElementById('cmd-qty').value);
+  const lieu = document.getElementById('cmd-lieu').value;
+  if (!qty || qty < 1) return showToast('Quantité invalide');
+  if (!s || qty > s.qty) return showToast('Stock insuffisant');
+  if (!lieu) return showToast('Lieu de livraison requis');
+  await set(push(ref(db, 'commandes')), { gang: currentUser.gang, lead: currentUser.name, color: currentUser.color, produit: s.produit, qty, montant: qty*s.price, lieu, status: 'En attente', date: new Date().toISOString() });
+  await update(ref(db, 'stock/' + selId), { qty: s.qty - qty });
+  document.getElementById('cmd-qty').value = '';
+  document.getElementById('cmd-lieu').value = '';
+  showPageDirect('client-dashboard');
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+  showToast('Commande envoyée !');
+}
+
+function updateClock() { document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+setInterval(updateClock,1000); updateClock();
+
+await initDefaultStock();
+</script>
+</body>
+</html>
