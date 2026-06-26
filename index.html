@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BMF Enterprises — Portail</title>
+<title>BEF Enterprises — Portail</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -74,7 +74,7 @@
 
 <div id="login-screen" style="display:none;">
   <div class="login-box">
-    <div class="login-logo">BMF</div>
+    <div class="login-logo">BEF/div>
     <div class="login-sub">Enterprises — Portail sécurisé</div>
     <label class="login-label">Clé d'accès</label>
     <input type="text" class="login-input" id="key-input" placeholder="BMF-XXXX-XXXX" maxlength="20" onkeydown="if(event.key==='Enter')tryLogin()">
@@ -86,7 +86,7 @@
 <div id="app" style="display:none;">
   <div class="header">
     <div>
-      <div class="logo">B<span>M</span>F <span style="color:var(--text-muted);font-size:14px;letter-spacing:2px;">ENTERPRISES</span></div>
+      <div class="logo">B<span>E</span>F <span style="color:var(--text-muted);font-size:14px;letter-spacing:2px;">ENTERPRISES</span></div>
       <div style="margin-top:4px;font-size:11px;color:var(--text-muted);letter-spacing:1px;" id="header-user"></div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;">
@@ -216,7 +216,7 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
 
-const ADMIN_KEY = "BMF-ADMIN-2025";
+const ADMIN_KEY = "BEF-ADMIN-2025";
 let currentUser = null;
 let stockCache = {};
 let keysCache = {};
@@ -239,8 +239,7 @@ async function initDefaultStock() {
   const snap = await get(ref(db, 'stock'));
   if (!snap.exists()) {
     await set(ref(db, 'stock'), {
-      s1: { produit: "Pochon standard", qty: 200, price: 54, note: "Unité de base" },
-      s2: { produit: "Pochon premium", qty: 80, price: 54, note: "Qualité supérieure" }
+      s1: { produit: "Petit pain", qty: 200, price: 54, note: "Unité de base" }
     });
   }
 }
@@ -250,7 +249,7 @@ window.tryLogin = async function() {
   const key = document.getElementById('key-input').value.trim().toUpperCase();
   document.getElementById('login-error').style.display = 'none';
   if (key === ADMIN_KEY) {
-    currentUser = { role: 'admin', name: 'Boss', gang: 'BMF', color: '#C9A84C' };
+    currentUser = { role: 'admin', name: 'Boss', gang: 'BEF', color: '#C9A84C' };
     launchApp();
   } else {
     const snap = await get(ref(db, 'keys'));
