@@ -515,9 +515,7 @@ window.addAdminStock = async function() {
   const kg = parseFloat(document.getElementById('as-qty').value);
   const price = parseFloat(document.getElementById('as-price').value);
   if (!produit || !kg || !price) return showToast('Tous les champs requis');
-  const existing = Object.entries(stockCache).find(([id,s])=>s.produit===produit);
-  if (existing) { await update(ref(db,'stock/'+existing[0]), { qty: existing[1].qty+kg, price }); }
-  else { await set(push(ref(db,'stock')), { produit, qty: kg, price }); }
+  await set(push(ref(db,'stock')), { produit, qty: kg, price });
   toggleForm('admin-stock-form');
   ['as-produit','as-qty','as-price'].forEach(id => document.getElementById(id).value='');
   document.getElementById('as-qty-preview').textContent = '';
