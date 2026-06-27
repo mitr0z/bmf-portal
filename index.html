@@ -356,7 +356,7 @@ window.toggleForm = id => {
 async function initDefaultStock() {
   const snap = await get(ref(db, 'stock'));
   if (!snap.exists()) {
-    await set(ref(db, 'stock'), { s1: { produit: "Petit pain", qty: 200, price: 54, note: "Unité de base" } });
+    await set(push(ref(db, 'stock')), { produit: "Petit pain", qty: 200, price: 54 });
   }
 }
 
