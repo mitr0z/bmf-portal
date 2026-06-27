@@ -484,8 +484,37 @@ window.deleteCmd = async function(id) {
   await remove(ref(db, 'commandes/' + id));
   showToast('Commande supprimée');
 };
+async function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+}
+let _cmdFirstLoad = true;
 function listenCommandes() {
-  onValue(ref(db, 'commandes'), snap => { commandesCache = snap.exists() ? snap.val() : {}; renderAdminCmds(); renderAdminKeys(); });
+  requestNotifPermission();
+  onValue(ref(db, 'commandes'), snap => {
+    const newCache = snap.exists() ? snap.val() : {};
+    if (!_cmdFirstLoad) {
+      Object.entries(newCache).forEach(([id, c]) => {
+        if (!commandesCache[id] && c.status === 'En attente') {
+          triggerNotif(c);
+        }
+      });
+    }
+    _cmdFirstLoad = false;
+    commandesCache = newCache;
+    renderAdminCmds();
+    renderAdminKeys();
+  });
+}
+function triggerNotif(c) {
+  const title = '\u{1F4E6} Nouvelle commande \u2014 ' + c.gang;
+  const body = c.produit + ' \u00D7 ' + c.qty + ' kg\n\u{1F4B0} ' + fmt(c.montant) + '\n\u{1F4CD} ' + (c.lieu||'\u2014');
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const n = new Notification(title, { body, tag: 'bef-commande' });
+    n.onclick = () => { window.focus(); showPage('admin-commandes', document.querySelectorAll('.nav-btn')[1]); n.close(); };
+  }
+  showToast('\u{1F4E6} ' + c.gang + ' \u2014 ' + c.produit + ' \u00D7 ' + c.qty + ' kg');
 }
 function renderAdminCmds() {
   const tb = document.getElementById('admin-cmd-table');
