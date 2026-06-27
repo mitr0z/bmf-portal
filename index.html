@@ -231,11 +231,10 @@
     <div id="admin-stock-form" style="display:none;margin-top:1rem;" class="card">
       <div class="form-row">
         <div class="form-group"><label>Produit</label><input type="text" id="as-produit" placeholder="Nom du produit..."></div>
-        <div class="form-group"><label>Quantité (tonnes)</label><input type="number" id="as-qty" placeholder="ex: 2.5" step="0.1" oninput="previewGrams()"><small id="as-qty-preview" style="color:var(--gold);font-size:11px;margin-top:4px;display:block;"></small></div>
+        <div class="form-group"><label>Quantité (kg)</label><input type="number" id="as-qty" placeholder="ex: 2500" step="1" oninput="previewGrams()"><small id="as-qty-preview" style="color:var(--gold);font-size:11px;margin-top:4px;display:block;"></small></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Prix à l'unité ($)</label><input type="number" id="as-price" placeholder="54"></div>
-        <div class="form-group"><label>Note</label><input type="text" id="as-note" placeholder="Note..."></div>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-gold" onclick="addAdminStock()">Valider</button>
@@ -244,7 +243,7 @@
     </div>
     <div style="margin-top:1rem;" class="table-wrap">
       <table>
-        <thead><tr><th>Produit</th><th>Stock</th><th>Prix/unité</th><th>Note</th><th>Action</th></tr></thead>
+        <thead><tr><th>Produit</th><th>Stock</th><th>Prix/unité</th><th>Action</th></tr></thead>
         <tbody id="admin-stock-table"></tbody>
       </table>
     </div>
@@ -508,21 +507,19 @@ function renderAdminCmds() {
 }
 
 window.previewGrams = function() {
-  const t = parseFloat(document.getElementById('as-qty').value)||0;
-  document.getElementById('as-qty-preview').textContent = t > 0 ? '= ' + (t*1000).toLocaleString('fr-FR') + ' g' : '';
+  const kg = parseFloat(document.getElementById('as-qty').value)||0;
+  document.getElementById('as-qty-preview').textContent = kg > 0 ? '= ' + (kg/1000).toLocaleString('fr-FR', {minimumFractionDigits:0,maximumFractionDigits:3}) + ' t' : '';
 };
 window.addAdminStock = async function() {
   const produit = document.getElementById('as-produit').value.trim();
-  const tonnes = parseFloat(document.getElementById('as-qty').value);
+  const kg = parseFloat(document.getElementById('as-qty').value);
   const price = parseFloat(document.getElementById('as-price').value);
-  const note = document.getElementById('as-note').value;
-  if (!produit || !tonnes || !price) return showToast('Tous les champs requis');
-  const qty = tonnes * 1000;
+  if (!produit || !kg || !price) return showToast('Tous les champs requis');
   const existing = Object.entries(stockCache).find(([id,s])=>s.produit===produit);
-  if (existing) { await update(ref(db,'stock/'+existing[0]), { qty: existing[1].qty+qty, price, note: note||existing[1].note }); }
-  else { await set(push(ref(db,'stock')), { produit, qty, price, note: note||'—' }); }
+  if (existing) { await update(ref(db,'stock/'+existing[0]), { qty: existing[1].qty+kg, price }); }
+  else { await set(push(ref(db,'stock')), { produit, qty: kg, price }); }
   toggleForm('admin-stock-form');
-  ['as-produit','as-qty','as-price','as-note'].forEach(id => document.getElementById(id).value='');
+  ['as-produit','as-qty','as-price'].forEach(id => document.getElementById(id).value='');
   document.getElementById('as-qty-preview').textContent = '';
   showToast('✓ Stock mis à jour');
 };
@@ -540,12 +537,11 @@ function renderAdminStock() {
     const tonnes = (s.qty / 1000).toLocaleString('fr-FR', {minimumFractionDigits:0,maximumFractionDigits:3});
     return `<tr>
     <td><b>${s.produit}</b></td>
-    <td><span style="color:${s.qty<1000?'var(--red)':'var(--green)'};font-weight:600">${tonnes}t <span style="color:var(--text-muted);font-size:10px">(${s.qty}g)</span></span></td>
+    <td><span style="color:${s.qty<1000?'var(--red)':'var(--green)'};font-weight:600">${s.qty.toLocaleString('fr-FR')} kg <span style="color:var(--text-muted);font-size:10px">(${tonnes}t)</span></span></td>
     <td style="color:var(--gold);font-weight:600">${fmt(s.price)}</td>
-    <td style="color:var(--text-muted);font-size:11px">${s.note}</td>
     <td><button class="btn-red" onclick="deleteStock('${id}')">Suppr.</button></td>
   </tr>`;
-  }).join('') || `<tr><td colspan="5" class="empty">Aucun stock</td></tr>`;
+  }).join('') || `<tr><td colspan="4" class="empty">Aucun stock</td></tr>`;
 }
 
 function listenMyCommandes() {
