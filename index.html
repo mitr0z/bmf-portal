@@ -231,7 +231,7 @@
     <div id="admin-stock-form" style="display:none;margin-top:1rem;" class="card">
       <div class="form-row">
         <div class="form-group"><label>Produit</label><input type="text" id="as-produit" placeholder="Nom du produit..."></div>
-        <div class="form-group"><label>Quantité</label><input type="number" id="as-qty" placeholder="0"></div>
+        <div class="form-group"><label>Quantité (tonnes)</label><input type="number" id="as-qty" placeholder="ex: 2.5" step="0.1" oninput="previewGrams()"><small id="as-qty-preview" style="color:var(--gold);font-size:11px;margin-top:4px;display:block;"></small></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Prix à l'unité ($)</label><input type="number" id="as-price" placeholder="54"></div>
@@ -507,17 +507,23 @@ function renderAdminCmds() {
   </tr>`).join('') || `<tr><td colspan="8" class="empty">Aucune commande</td></tr>`;
 }
 
+window.previewGrams = function() {
+  const t = parseFloat(document.getElementById('as-qty').value)||0;
+  document.getElementById('as-qty-preview').textContent = t > 0 ? '= ' + (t*1000).toLocaleString('fr-FR') + ' g' : '';
+};
 window.addAdminStock = async function() {
   const produit = document.getElementById('as-produit').value.trim();
-  const qty = parseFloat(document.getElementById('as-qty').value);
+  const tonnes = parseFloat(document.getElementById('as-qty').value);
   const price = parseFloat(document.getElementById('as-price').value);
   const note = document.getElementById('as-note').value;
-  if (!produit || !qty || !price) return showToast('Tous les champs requis');
+  if (!produit || !tonnes || !price) return showToast('Tous les champs requis');
+  const qty = tonnes * 1000;
   const existing = Object.entries(stockCache).find(([id,s])=>s.produit===produit);
   if (existing) { await update(ref(db,'stock/'+existing[0]), { qty: existing[1].qty+qty, price, note: note||existing[1].note }); }
   else { await set(push(ref(db,'stock')), { produit, qty, price, note: note||'—' }); }
   toggleForm('admin-stock-form');
   ['as-produit','as-qty','as-price','as-note'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('as-qty-preview').textContent = '';
   showToast('✓ Stock mis à jour');
 };
 window.deleteStock = async function(id) {
@@ -530,13 +536,16 @@ function listenStock() {
 }
 function renderAdminStock() {
   const tb = document.getElementById('admin-stock-table');
-  tb.innerHTML = Object.entries(stockCache).map(([id,s]) => `<tr>
+  tb.innerHTML = Object.entries(stockCache).map(([id,s]) => {
+    const tonnes = (s.qty / 1000).toLocaleString('fr-FR', {minimumFractionDigits:0,maximumFractionDigits:3});
+    return `<tr>
     <td><b>${s.produit}</b></td>
-    <td><span style="color:${s.qty<20?'var(--red)':'var(--green)'};font-weight:600">${s.qty}</span></td>
+    <td><span style="color:${s.qty<1000?'var(--red)':'var(--green)'};font-weight:600">${tonnes}t <span style="color:var(--text-muted);font-size:10px">(${s.qty}g)</span></span></td>
     <td style="color:var(--gold);font-weight:600">${fmt(s.price)}</td>
     <td style="color:var(--text-muted);font-size:11px">${s.note}</td>
     <td><button class="btn-red" onclick="deleteStock('${id}')">Suppr.</button></td>
-  </tr>`).join('') || `<tr><td colspan="5" class="empty">Aucun stock</td></tr>`;
+  </tr>`;
+  }).join('') || `<tr><td colspan="5" class="empty">Aucun stock</td></tr>`;
 }
 
 function listenMyCommandes() {
